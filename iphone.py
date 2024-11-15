@@ -1,8 +1,13 @@
 import cv2
 import numpy as np
 import mss
+import pytesseract
+
+#x, y, w, h = 275, 200, 230, 160
 
 x, y, w, h = 275, 200, 230, 160
+
+
 
 # Initialize mss for screen capture
 with mss.mss() as sct:
@@ -14,10 +19,13 @@ with mss.mss() as sct:
         
         roi = frame[y:y+h, x:x+w]
 
-        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)  
+        gray_frame = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY) 
 
-        # Display the captured frame
-        cv2.imshow("Screen Capture", gray)
+        text = pytesseract.image_to_string(gray_frame)
+
+        print(text)
+
+        cv2.imshow("Screen Capture", gray_frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
