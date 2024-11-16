@@ -18,7 +18,7 @@ while True:
     if data == "click":
         click()
         client_socket.send("Moving to next base".encode())
-    elif data.startswith("Resources:"):
+    elif data == "base":
         print(data)
-        client_socket.send("Found Base".encode())
+        client_socket.send("Found attackable base".encode())
     client_socket.close()

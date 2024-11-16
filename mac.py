@@ -4,14 +4,14 @@ import mss
 import pytesseract
 import socket
 import os 
-import time
 
 # Global Values
 SERVER_HOST = "10.0.0.24"
 SERVER_PORT = 65432
 empty_tracker = 0
-base_searching = False
-
+capture_tracker = 0
+inactivity_status = False
+server_response = ""
 # Currency Values for Terminal Printing
 resources = {"GOLD": "", "ELIXIR": "", "DARK": ""}
 # Currency Values for Averaging
@@ -31,7 +31,6 @@ deviations = {
     "ELIXIR": 0.0,
     "DARK": 0.0
 }
-searching_state = "SEARCHING..."
 
 def dynamic_printer():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -46,8 +45,11 @@ def dynamic_printer():
     print(f"{'Dark':<10}{f'{resources['DARK']:,}' if resources['DARK'] != '' else '0':<15}{averages['DARK']:<20,.2f}{deviations['DARK']:<20,.2f}")
 
     # Status Section
-    print("\nSTATUS:")
-    print(f"{'Searching...' if base_searching else 'On Base':<15}")
+    print("\nPROCESS STATUS:")
+    print(f"{'INACTIVE' if inactivity_status else 'ACTIVE':<15}")
+
+    print("\nLast Server Response:")
+    print(f"{server_response:<15}")
 
 
 def reset_values():
@@ -99,16 +101,17 @@ def image_processing(currency, frame, frame_config, window_coords):
     cv2.moveWindow(currency, window_coords[0], window_coords[1])
     return roi
 
+def send_data_to_server(message):
+    global server_response
+    client_socket.send(message.encode())
+    server_response = client_socket.recv(1024).decode()
+
+
 with mss.mss() as sct:
     monitor = sct.monitors[1] 
 
-    # Socket stuff
-    # client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # client_socket.connect((SERVER_HOST, SERVER_PORT))
-    # client_socket.send("sop".encode())
-    # response = client_socket.recv(1024).decode()
-    # print(f"Response from server: {response}")
-    # client_socket.close()
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((SERVER_HOST, SERVER_PORT))
 
     while True:
         screen = sct.grab(monitor)
@@ -134,13 +137,16 @@ with mss.mss() as sct:
         roi = image_processing("DARK", frame, frame_config, window_coords)
         string_extraction_and_cleanup(roi, config, "DARK")
 
-        if empty_tracker > 1 and not base_searching:
+        if empty_tracker <= 1 and not inactivity_status:
+            capture_tracker = capture_tracker + 1
+
+        if empty_tracker > 1 and not inactivity_status:
             reset_values()
-            base_searching = True
+            inactivity_status = True
             for currency in resource_values:
                 resource_values[currency].clear()
         elif empty_tracker == 0:
-            base_searching = False
+            inactivity_status = False
 
         for resource, values in resource_values.items():
             if values:
@@ -152,7 +158,14 @@ with mss.mss() as sct:
 
         dynamic_printer()
 
+        if capture_tracker > 10 and averages["GOLD"] > 500000 and averages["ELIXIR"] > 500000:
+            send_data_to_server("base")
+        elif capture_tracker > 10 and averages["GOLD"] < 500000 and averages["ELIXIR"] < 500000:
+            send_data_to_server("click")
+            capture_tracker = 0
+
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
 cv2.destroyAllWindows()
+client_socket.close()
