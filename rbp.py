@@ -21,4 +21,3 @@ while True:
     elif data == "base":
         print(data)
         client_socket.send("Found attackable base".encode())
-    client_socket.close()

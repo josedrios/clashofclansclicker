@@ -106,7 +106,6 @@ def send_data_to_server(message):
     client_socket.send(message.encode())
     server_response = client_socket.recv(1024).decode()
 
-
 with mss.mss() as sct:
     monitor = sct.monitors[1] 
 
