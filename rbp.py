@@ -1,5 +1,8 @@
 import socket
 
+def click():
+    print("Clicked")
+
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 65432
 
@@ -12,6 +15,10 @@ while True:
     client_socket, client_address = server_socket.accept()
     print(f"Connection from {client_address}")
     data = client_socket.recv(1024).decode()
-    if data == "sop":
-        client_socket.send("SOP!".encode())
+    if data == "click":
+        click()
+        client_socket.send("Moving to next base".encode())
+    elif data.startswith("Resources:"):
+        print(data)
+        client_socket.send("Found Base".encode())
     client_socket.close()
