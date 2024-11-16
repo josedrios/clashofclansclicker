@@ -1,10 +1,12 @@
 import cv2
+import sys
 import numpy as np
 import mss
 import pytesseract
 
 # Global Values
 is_empty = 0
+new_base_message_shown = False
 resources = {"GOLD": "", "ELIXIR": "", "DARK": ""}
 
 def string_extraction_and_cleanup(roi, config, currency):
@@ -14,8 +16,9 @@ def string_extraction_and_cleanup(roi, config, currency):
     cleaned_string = ''.join(c for c in text if c.isdigit())
     if(cleaned_string == ""):
         is_empty = is_empty + 1
-        resources[currency] = "0"
+        resources[currency] = ""
     else:
+        resources[currency] = ""
         resources[currency] = cleaned_string
         print(f"GOLD: {resources['GOLD']} | ELIXIR: {resources['ELIXIR']} | DARK: {resources['DARK']}", end='\r')
         is_empty = 0
@@ -27,7 +30,7 @@ with mss.mss() as sct:
     while True:
         screen = sct.grab(monitor)
         frame = np.array(screen)
-        config = ('-l eng --oem 1 --psm 6')
+        config = ('--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789')
         x, y, w, h = 275, 200, 170, 40
         
         # GOLD
@@ -57,8 +60,12 @@ with mss.mss() as sct:
 
         string_extraction_and_cleanup(roi, config, "DARK")
 
-        if is_empty > 3:
-            sys.stdout.flush()
+
+        if is_empty > 4 and not new_base_message_shown:
+            print("NEW BASE DETECTED"+" "*40, end='\r')
+            new_base_message_shown = True
+        elif is_empty == 0:
+            new_base_message_shown = False
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
