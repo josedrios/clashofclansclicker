@@ -35,16 +35,20 @@ searching_state = "SEARCHING..."
 
 def dynamic_printer():
     os.system('cls' if os.name == 'nt' else 'clear')
-    print(f"Gold: {resources['GOLD']}")
-    print(f"Elixir: {resources['ELIXIR']}")
-    print(f"Dark: {resources['DARK']}")
-    print(f"Average Gold: {averages['GOLD']:.2f}")
-    print(f"Gold Average Deviation: {deviations['GOLD']:.2f}")
-    print(f"Average Elixir: {averages['ELIXIR']:.2f}")
-    print(f"Elixir Average Deviation: {deviations['ELIXIR']:.2f}")
-    print(f"Average Dark: {averages['DARK']:.2f}")
-    print(f"Dark Average Deviation: {deviations['DARK']:.2f}")
-    print(f"STATUS: {"Searching..." if base_searching else "Idle"}")
+
+    # Print Column Headers
+    print(f"{'Resource':<10}{'Amount':<15}{'Average':<20}{'Standard Dev.':<20}")
+    print("-" * 65)
+
+    # Print Rows
+    print(f"{'Gold':<10}{f'{resources['GOLD']:,}' if resources['GOLD'] != '' else '0':<15}{averages['GOLD']:<20,.2f}{deviations['GOLD']:<20,.2f}")
+    print(f"{'Elixir':<10}{f'{resources['ELIXIR']:,}' if resources['ELIXIR'] != '' else '0':<15}{averages['ELIXIR']:<20,.2f}{deviations['ELIXIR']:<20,.2f}")
+    print(f"{'Dark':<10}{f'{resources['DARK']:,}' if resources['DARK'] != '' else '0':<15}{averages['DARK']:<20,.2f}{deviations['DARK']:<20,.2f}")
+
+    # Status Section
+    print("\nSTATUS:")
+    print(f"{'Searching...' if base_searching else 'On Base':<15}")
+
 
 def reset_values():
     global resources, resource_values, averages, deviations
@@ -130,15 +134,13 @@ with mss.mss() as sct:
         roi = image_processing("DARK", frame, frame_config, window_coords)
         string_extraction_and_cleanup(roi, config, "DARK")
 
-        if empty_tracker > 4 and not base_searching:
+        if empty_tracker > 1 and not base_searching:
             reset_values()
             base_searching = True
             for currency in resource_values:
                 resource_values[currency].clear()
         elif empty_tracker == 0:
             base_searching = False
-
-        dynamic_printer()
 
         for resource, values in resource_values.items():
             if values:
