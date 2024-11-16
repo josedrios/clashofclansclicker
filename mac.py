@@ -9,52 +9,76 @@ import time
 # Global Values
 SERVER_HOST = "10.0.0.24"
 SERVER_PORT = 65432
-is_empty = 0
-new_base_message_shown = False
+empty_tracker = 0
+base_searching = False
+
+# Currency Values for Terminal Printing
 resources = {"GOLD": "", "ELIXIR": "", "DARK": ""}
+# Currency Values for Averaging
 resource_values = {
     "GOLD": [],
     "ELIXIR": [],
     "DARK": []
 }
-averages = {}
-
-print_state = {
-    "GOLD": 0,
-    "ELIXIR": 0,
-    "DARK": 0,
-    "avg_GOLD": 0.0,
-    "avg_ELIXIR": 0.0,
-    "avg_DARK": 0.0,
-    "searching_indicator": "Idle"
+# Averaged Currency Values
+averages = {
+    "GOLD": 0.0,
+    "ELIXIR": 0.0,
+    "DARK": 0.0,
 }
+deviations = {
+    "GOLD": 0.0,
+    "ELIXIR": 0.0,
+    "DARK": 0.0
+}
+searching_state = "SEARCHING..."
 
 def dynamic_printer():
     os.system('cls' if os.name == 'nt' else 'clear')
-    print(f"GOLD: {print_state['GOLD']}")
-    print(f"ELIXIR: {print_state['ELIXIR']}")
-    print(f"DARK: {print_state['DARK']}")
-    print(f"AVG GOLD: {print_state['avg_GOLD']:.2f}")
-    print(f"AVG ELIXIR: {print_state['avg_ELIXIR']:.2f}")
-    print(f"AVG DARK: {print_state['avg_DARK']:.2f}")
-    print(f"STATUS: {print_state['searching_indicator']}")
+    print(f"Gold: {resources['GOLD']}")
+    print(f"Elixir: {resources['ELIXIR']}")
+    print(f"Dark: {resources['DARK']}")
+    print(f"Average Gold: {averages['GOLD']:.2f}")
+    print(f"Gold Average Deviation: {deviations['GOLD']:.2f}")
+    print(f"Average Elixir: {averages['ELIXIR']:.2f}")
+    print(f"Elixir Average Deviation: {deviations['ELIXIR']:.2f}")
+    print(f"Average Dark: {averages['DARK']:.2f}")
+    print(f"Dark Average Deviation: {deviations['DARK']:.2f}")
+    print(f"STATUS: {"Searching..." if base_searching else "Idle"}")
+
+def reset_values():
+    global resources, resource_values, averages, deviations
+    resources = {"GOLD": "", "ELIXIR": "", "DARK": ""}
+    resource_values = {
+        "GOLD": [],
+        "ELIXIR": [],
+        "DARK": []
+    }
+    averages = {
+        "GOLD": 0.0,
+        "ELIXIR": 0.0,
+        "DARK": 0.0,
+    }
+    deviations = {
+        "GOLD": 0.0,
+        "ELIXIR": 0.0,
+        "DARK": 0.0
+    }
 
 def string_extraction_and_cleanup(roi, config, currency):
-    global is_empty, resources, resource_values
+    global empty_tracker, resources, resource_values
     text = pytesseract.image_to_string(roi, config=config)
     text = text.rstrip('\n')
     cleaned_string = ''.join(c for c in text if c.isdigit())
+
     if(cleaned_string == ""):
-        is_empty = is_empty + 1
-        resources[currency] = ""
+        empty_tracker = empty_tracker + 1
+        resources[currency] = 0
     else:
-        resources[currency] = ""
-        resources[currency] = cleaned_string
-        print_state[currency] = cleaned_string
-        if resources[currency] != "":
-            currency_integer = int(resources[currency])
-            resource_values[currency].append(currency_integer)
-        is_empty = 0
+        currency_integer = int(cleaned_string)
+        resources[currency] = currency_integer
+        resource_values[currency].append(currency_integer)
+        empty_tracker = 0
 
 def image_processing(currency, frame, frame_config, window_coords):
     x, y, w, h = frame_config
@@ -90,46 +114,41 @@ with mss.mss() as sct:
         
         # GOLD
         frame_config = [275, 200, 170, 40]
-        window_coords = [0, 120]
+        window_coords = [0, 170]
         roi = image_processing("GOLD", frame, frame_config, window_coords)
         string_extraction_and_cleanup(roi, config, "GOLD")
 
         # ELIXIR
         frame_config = [275, 260, 170, 40]
-        window_coords = [400, 120]
+        window_coords = [400, 170]
         roi = image_processing("ELIXIR", frame, frame_config, window_coords)
         string_extraction_and_cleanup(roi, config, "ELIXIR")
 
         # DARK
         frame_config = [275, 320, 130, 40]
-        window_coords = [800, 120]
+        window_coords = [800, 170]
         roi = image_processing("DARK", frame, frame_config, window_coords)
         string_extraction_and_cleanup(roi, config, "DARK")
 
-        if is_empty > 4 and not new_base_message_shown:
-            averages.clear()
-            value_resets = list(print_state.keys())[:6]  # Get the first 6 keys
-            for key in value_resets:
-                print_state[key] = 0
-            print_state["searching_indicator"] = "Searching"
-            dynamic_printer()
-            new_base_message_shown = True
+        if empty_tracker > 4 and not base_searching:
+            reset_values()
+            base_searching = True
             for currency in resource_values:
                 resource_values[currency].clear()
-        elif is_empty == 0:
-            print_state["searching_indicator"] = "Idle"
-            dynamic_printer()
-            new_base_message_shown = False
+        elif empty_tracker == 0:
+            base_searching = False
+
+        dynamic_printer()
 
         for resource, values in resource_values.items():
             if values:
                 averages[resource] = sum(values) / len(values)
-                print_state[f"avg_{resource}"] = averages[resource]
-                dynamic_printer()
+                deviations[resource] = np.std(values)
             else:
-                averages[resource] = 0
-                print_state[f"avg_{resource}"] = 0
-                dynamic_printer()
+                averages[resource] = 0.0
+                deviations[resource] = 0.0
+
+        dynamic_printer()
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
