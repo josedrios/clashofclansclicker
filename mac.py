@@ -1,13 +1,15 @@
 import cv2
-import sys
 import numpy as np
 import mss
 import pytesseract
+import socket
 
 # Global Values
 is_empty = 0
 new_base_message_shown = False
 resources = {"GOLD": "", "ELIXIR": "", "DARK": ""}
+SERVER_HOST = "http://<raspberry-pi-ip>:5000/click"
+SERVER_PORT = 65432
 
 def string_extraction_and_cleanup(roi, config, currency):
     global is_empty, resources
@@ -41,6 +43,12 @@ def image_processing(currency, frame, frame_config, window_coords):
 # Initialize mss for screen capture
 with mss.mss() as sct:
     monitor = sct.monitors[1]  # Adjust for the desired monitor
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((SERVER_HOST, SERVER_PORT))
+    client_socket.send("sop".encode())
+    response = client_socket.recv(1024).decode()
+    print(f"Response from server: {response}")
+    client_socket.close()
 
     while True:
         screen = sct.grab(monitor)
