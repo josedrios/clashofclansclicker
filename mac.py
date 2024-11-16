@@ -103,8 +103,11 @@ def image_processing(currency, frame, frame_config, window_coords):
 
 def send_data_to_server(message):
     global server_response
-    client_socket.send(message.encode())
-    server_response = client_socket.recv(1024).decode()
+    try:
+        client_socket.send(message.encode())
+        server_response = client_socket.recv(1024).decode()
+    except:
+        print("Socket Error: {e}")
 
 with mss.mss() as sct:
     monitor = sct.monitors[1] 
@@ -157,11 +160,12 @@ with mss.mss() as sct:
 
         dynamic_printer()
 
-        if capture_tracker > 10 and averages["GOLD"] > 500000 and averages["ELIXIR"] > 500000:
-            send_data_to_server("base")
-        elif capture_tracker > 10 and averages["GOLD"] < 500000 and averages["ELIXIR"] < 500000:
-            send_data_to_server("click")
-            capture_tracker = 0
+        if capture_tracker > 10:
+            if averages["GOLD"] > 500000 and averages["ELIXIR"] > 500000:
+                send_data_to_server("base")
+            elif averages["GOLD"] < 500000 and averages["ELIXIR"] < 500000:
+                send_data_to_server("click")
+                capture_tracker = 0
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
