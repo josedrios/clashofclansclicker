@@ -5,6 +5,7 @@ import pytesseract
 import socket
 import os 
 import time
+import pygame
 
 from constants import *
 from functions import process_image
@@ -23,7 +24,7 @@ def dynamic_printer():
 
     # Status Section
     print("-" * 65)
-    print(f"Elapsed Time: {elapsed_time:.2f} seconds")
+    print(f"Time Passed: {elapsed_time:.2f} seconds")
     print(f"Last Client Status: {client_status:<15}")
     print(f"Last Server Response: {server_response:<15}")
 
@@ -70,6 +71,9 @@ def send_data_to_server(client_socket, message):
 with mss.mss() as sct:
     monitor = sct.monitors[1] 
 
+    pygame.mixer.init()
+    pygame.mixer.music.load("alert_noise.mp3")
+
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((SERVER_HOST, SERVER_PORT))
     start_time = time.perf_counter()
@@ -100,25 +104,24 @@ with mss.mss() as sct:
         current_time = time.perf_counter()
         elapsed_time = current_time - start_time
 
-        if elapsed_time >= 10:
+        if elapsed_time >= 13:
             if averages["GOLD"] > 500000 and averages["ELIXIR"] > 500000:
-                client_status = "Found Base at " + f" {elapsed_time:.2f} seconds"
+                client_status = "Stop" + f" ({elapsed_time:.2f}s)"
                 send_data_to_server(client_socket, "base")
+                pygame.mixer.music.play()
+                while pygame.mixer.music.get_busy():
+                    pass
             elif averages["GOLD"] < 500000 and averages["ELIXIR"] < 500000:
-                client_status = "Clicked Next Base" + f" at {elapsed_time:.2f} seconds"
+                client_status = "Next" + f" ({elapsed_time:.2f}s)"
                 send_data_to_server(client_socket, "click")
+                time.sleep(1)
             reset_values()
-            for currency in resource_values:
-                resource_values[currency].clear()
             start_time = time.perf_counter()
 
         for resource, values in resource_values.items():
             if values:
                 averages[resource] = sum(values) / len(values)
                 deviations[resource] = np.std(values)
-            else:
-                averages[resource] = 0.0
-                deviations[resource] = 0.0
 
         dynamic_printer()
 
