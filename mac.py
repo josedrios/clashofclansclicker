@@ -6,34 +6,8 @@ import socket
 import os 
 import time
 
-# Global Values
-start_time = time.time()
-SERVER_HOST = "10.0.0.24"
-SERVER_PORT = 65432
-empty_tracker = 0
-capture_tracker = 0
-inactivity_status = False
-server_response = ""
-client_status = ""
-# Currency Values for Terminal Printing
-resources = {"GOLD": "", "ELIXIR": "", "DARK": ""}
-# Currency Values for Averaging
-resource_values = {
-    "GOLD": [],
-    "ELIXIR": [],
-    "DARK": []
-}
-# Averaged Currency Values
-averages = {
-    "GOLD": 0.0,
-    "ELIXIR": 0.0,
-    "DARK": 0.0,
-}
-deviations = {
-    "GOLD": 0.0,
-    "ELIXIR": 0.0,
-    "DARK": 0.0
-}
+from constants import *
+from functions import process_image
 
 def dynamic_printer():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -48,10 +22,9 @@ def dynamic_printer():
     print(f"{'Dark':<10}{f'{resources['DARK']:,}' if resources['DARK'] != '' else '0':<15}{averages['DARK']:<20,.2f}{deviations['DARK']:<20,.2f}")
 
     # Status Section
-    print("\nPROCESS STATUS:")
-    print(f"{'INACTIVE' if inactivity_status else 'ACTIVE':<15}")
-    print(f"Properly Captured Frames:{capture_tracker:<15}")
-    print(f"Last Client Status:{client_status:<15}")
+    print("-" * 65)
+    print(f"Elapsed Time: {elapsed_time:.2f} seconds")
+    print(f"Last Client Status: {client_status:<15}")
     print(f"Last Server Response: {server_response:<15}")
 
 def reset_values():
@@ -80,28 +53,11 @@ def string_extraction_and_cleanup(roi, config, currency):
     cleaned_string = ''.join(c for c in text if c.isdigit())
 
     if(cleaned_string == ""):
-        empty_tracker = empty_tracker + 1
         resources[currency] = 0
     else:
         currency_integer = int(cleaned_string)
         resources[currency] = currency_integer
         resource_values[currency].append(currency_integer)
-        empty_tracker = 0
-
-def image_processing(currency, frame, frame_config, window_coords):
-    x, y, w, h = frame_config
-    roi = frame[y:y+h, x:x+w]
-    roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-    roi = cv2.medianBlur(roi, 3)
-    _, roi = cv2.threshold(roi, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    roi = cv2.resize(roi, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    kernel = np.ones((2,2), np.uint8)
-    roi = cv2.dilate(roi, kernel, iterations=1)
-    roi = cv2.erode(roi, kernel, iterations=1)
-    roi = cv2.morphologyEx(roi, cv2.MORPH_OPEN, kernel)
-    cv2.imshow(currency, roi)
-    cv2.moveWindow(currency, window_coords[0], window_coords[1])
-    return roi
 
 def send_data_to_server(client_socket, message):
     global server_response
@@ -109,14 +65,14 @@ def send_data_to_server(client_socket, message):
         client_socket.send(message.encode())
         server_response = client_socket.recv(1024).decode()
     except:
-        print("Socket Error: {e}")
+        server_response = "ERROR"
 
 with mss.mss() as sct:
     monitor = sct.monitors[1] 
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((SERVER_HOST, SERVER_PORT))
-
+    start_time = time.perf_counter()
     while True:
         screen = sct.grab(monitor)
         frame = np.array(screen)
@@ -126,31 +82,35 @@ with mss.mss() as sct:
         # GOLD
         frame_config = [275, 200, 170, 40]
         window_coords = [0, 170]
-        roi = image_processing("GOLD", frame, frame_config, window_coords)
+        roi = process_image("GOLD", frame, frame_config, window_coords)
         string_extraction_and_cleanup(roi, config, "GOLD")
 
         # ELIXIR
         frame_config = [275, 260, 170, 40]
         window_coords = [400, 170]
-        roi = image_processing("ELIXIR", frame, frame_config, window_coords)
+        roi = process_image("ELIXIR", frame, frame_config, window_coords)
         string_extraction_and_cleanup(roi, config, "ELIXIR")
 
         # DARK
         frame_config = [275, 320, 130, 40]
         window_coords = [800, 170]
-        roi = image_processing("DARK", frame, frame_config, window_coords)
+        roi = process_image("DARK", frame, frame_config, window_coords)
         string_extraction_and_cleanup(roi, config, "DARK")
 
-        if empty_tracker <= 5 and not inactivity_status:
-            capture_tracker = capture_tracker + 1
+        current_time = time.perf_counter()
+        elapsed_time = current_time - start_time
 
-        if empty_tracker > 5 and not inactivity_status:
+        if elapsed_time >= 10:
+            if averages["GOLD"] > 500000 and averages["ELIXIR"] > 500000:
+                client_status = "Found Base at " + f" {elapsed_time:.2f} seconds"
+                send_data_to_server(client_socket, "base")
+            elif averages["GOLD"] < 500000 and averages["ELIXIR"] < 500000:
+                client_status = "Clicked Next Base" + f" at {elapsed_time:.2f} seconds"
+                send_data_to_server(client_socket, "click")
             reset_values()
-            inactivity_status = True
             for currency in resource_values:
                 resource_values[currency].clear()
-        elif empty_tracker == 0:
-            inactivity_status = False
+            start_time = time.perf_counter()
 
         for resource, values in resource_values.items():
             if values:
@@ -161,19 +121,6 @@ with mss.mss() as sct:
                 deviations[resource] = 0.0
 
         dynamic_printer()
-
-        if capture_tracker > 7:
-            if averages["GOLD"] > 500000 and averages["ELIXIR"] > 500000:
-                elapsed_time = time.time() - start_time
-                client_status = "Found Base" + f" in {elapsed_time:.2f} seconds"
-                send_data_to_server(client_socket, "base")
-                time.sleep(5)
-                client_status = "Back to loop"
-            elif averages["GOLD"] < 500000 and averages["ELIXIR"] < 500000:
-                elapsed_time = time.time() - start_time
-                client_status = "Clicked Next Base" + f" in {elapsed_time:.2f} seconds"
-                send_data_to_server(client_socket, "click")
-                capture_tracker = 0
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
