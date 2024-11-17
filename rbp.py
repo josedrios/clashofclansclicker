@@ -2,7 +2,7 @@ import socket
 
 def click():
     global counter
-    print(f"{counter}. Clicked")
+    print(f"Base No.{counter} \033[1;32mskipped\033[0m")
 
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 65432
@@ -20,15 +20,14 @@ print(f"Connection from {client_address}")
 while True:
     try:
         data = client_socket.recv(1024).decode()  # Receive data
-        print(f"Received data: {data}")
         if data == "click":
             counter = counter + 1
             click()
-            client_socket.send("Next Base".encode())
+            client_socket.send(f"Base No.{counter} Skipped".encode())
         elif data == "base":
             counter = counter + 1
-            print(f"{counter}. Found base")
-            client_socket.send("Found Base".encode())
+            print(f"Base No.{counter} \033[1;31mbold marked\033[0m")
+            client_socket.send(f"Base No.{counter} Marked".encode())
         else:
             client_socket.send("Unknown command".encode())  # Fallback response
     except Exception as e:

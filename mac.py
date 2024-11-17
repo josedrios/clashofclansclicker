@@ -18,9 +18,9 @@ def dynamic_printer():
     print("-" * 65)
 
     # Print Rows
-    print(f"{'Gold':<10}{f'{resources['GOLD']:,}' if resources['GOLD'] != '' else '0':<15}{averages['GOLD']:<20,.2f}{deviations['GOLD']:<20,.2f}")
-    print(f"{'Elixir':<10}{f'{resources['ELIXIR']:,}' if resources['ELIXIR'] != '' else '0':<15}{averages['ELIXIR']:<20,.2f}{deviations['ELIXIR']:<20,.2f}")
-    print(f"{'Dark':<10}{f'{resources['DARK']:,}' if resources['DARK'] != '' else '0':<15}{averages['DARK']:<20,.2f}{deviations['DARK']:<20,.2f}")
+    print(f"\033[1;33m{'Gold':<10}\033[0m{f'{resources['GOLD']:,}' if resources['GOLD'] != '' else '0':<15}{averages['GOLD']:<20,.2f}{deviations['GOLD']:<20,.2f}")
+    print(f"\033[1;35m{'Elixir':<10}\033[0m{f'{resources['ELIXIR']:,}' if resources['ELIXIR'] != '' else '0':<15}{averages['ELIXIR']:<20,.2f}{deviations['ELIXIR']:<20,.2f}")
+    print(f"\033[1m{'Dark':<10}\033[0m{f'{resources['DARK']:,}' if resources['DARK'] != '' else '0':<15}{averages['DARK']:<20,.2f}{deviations['DARK']:<20,.2f}")
 
     # Status Section
     print("-" * 65)
@@ -68,9 +68,9 @@ def send_data_to_server(client_socket, message):
     except:
         server_response = "ERROR"
 
-def sound_alert(filename):
+def sound_alert(filename, volume):
     pygame.mixer.music.load(filename)
-    pygame.mixer.music.set_volume(0.1)
+    pygame.mixer.music.set_volume(volume)
     pygame.mixer.music.play()
     while pygame.mixer.music.get_busy():  # Wait for the music to finish
         pass
@@ -109,17 +109,20 @@ with mss.mss() as sct:
         current_time = time.perf_counter()
         elapsed_time = current_time - start_time
 
-        if elapsed_time > 5:
+        if elapsed_time > 7:
             if averages["GOLD"] > 700000 and averages["ELIXIR"] > 700000:
-                reset_values()
-                sound_alert("alert.mp3")
+                sound_alert("alert.mp3", 0.5)
                 client_status = "Stop" + f" ({elapsed_time:.2f}s)"
                 send_data_to_server(client_socket, "base")
-            elif averages["GOLD"] <= 700000 or averages["ELIXIR"] <= 700000:
                 reset_values()
-                sound_alert("skip.mp3")
+                time.sleep(0.8)
+                # ADD CONTINUE KEY TO SKIP TIMER AND CONTINUTE PROGRAM
+            elif averages["GOLD"] <= 700000 or averages["ELIXIR"] <= 700000:
+                sound_alert("skip.mp3", 0.2)
                 client_status = "Next" + f" ({elapsed_time:.2f}s)"
                 send_data_to_server(client_socket, "click")
+                reset_values()
+                time.sleep(2)
             start_time = time.perf_counter()
 
         for resource, values in resource_values.items():
