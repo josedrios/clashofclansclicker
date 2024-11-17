@@ -4,14 +4,17 @@ import mss
 import pytesseract
 import socket
 import os 
+import time
 
 # Global Values
+start_time = time.time()
 SERVER_HOST = "10.0.0.24"
 SERVER_PORT = 65432
 empty_tracker = 0
 capture_tracker = 0
 inactivity_status = False
 server_response = ""
+client_status = ""
 # Currency Values for Terminal Printing
 resources = {"GOLD": "", "ELIXIR": "", "DARK": ""}
 # Currency Values for Averaging
@@ -47,10 +50,9 @@ def dynamic_printer():
     # Status Section
     print("\nPROCESS STATUS:")
     print(f"{'INACTIVE' if inactivity_status else 'ACTIVE':<15}")
-
-    print("\nLast Server Response:")
-    print(f"{server_response:<15}")
-
+    print(f"Properly Captured Frames:{capture_tracker:<15}")
+    print(f"Last Client Status:{client_status:<15}")
+    print(f"Last Server Response: {server_response:<15}")
 
 def reset_values():
     global resources, resource_values, averages, deviations
@@ -101,7 +103,7 @@ def image_processing(currency, frame, frame_config, window_coords):
     cv2.moveWindow(currency, window_coords[0], window_coords[1])
     return roi
 
-def send_data_to_server(message):
+def send_data_to_server(client_socket, message):
     global server_response
     try:
         client_socket.send(message.encode())
@@ -139,10 +141,10 @@ with mss.mss() as sct:
         roi = image_processing("DARK", frame, frame_config, window_coords)
         string_extraction_and_cleanup(roi, config, "DARK")
 
-        if empty_tracker <= 1 and not inactivity_status:
+        if empty_tracker <= 5 and not inactivity_status:
             capture_tracker = capture_tracker + 1
 
-        if empty_tracker > 1 and not inactivity_status:
+        if empty_tracker > 5 and not inactivity_status:
             reset_values()
             inactivity_status = True
             for currency in resource_values:
@@ -160,11 +162,17 @@ with mss.mss() as sct:
 
         dynamic_printer()
 
-        if capture_tracker > 10:
+        if capture_tracker > 7:
             if averages["GOLD"] > 500000 and averages["ELIXIR"] > 500000:
-                send_data_to_server("base")
+                elapsed_time = time.time() - start_time
+                client_status = "Found Base" + f" in {elapsed_time:.2f} seconds"
+                send_data_to_server(client_socket, "base")
+                time.sleep(5)
+                client_status = "Back to loop"
             elif averages["GOLD"] < 500000 and averages["ELIXIR"] < 500000:
-                send_data_to_server("click")
+                elapsed_time = time.time() - start_time
+                client_status = "Clicked Next Base" + f" in {elapsed_time:.2f} seconds"
+                send_data_to_server(client_socket, "click")
                 capture_tracker = 0
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
