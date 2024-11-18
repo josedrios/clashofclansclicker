@@ -1,8 +1,11 @@
 import socket
+import RPi.GPIO as GPIO
+import time
 
-def click():
-    global counter
-    print(f"Base No.{counter} \033[1;32mskipped\033[0m")
+TOUCH_PIN = 4
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(TOUCH_PIN, GPIO.OUT)
 
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 65432
@@ -22,12 +25,20 @@ while True:
         data = client_socket.recv(1024).decode()  # Receive data
         if data == "click":
             counter = counter + 1
-            click()
+            GPIO.output(TOUCH_PIN, GPIO.HIGH)
+            time.sleep(0.35)
+            GPIO.output(TOUCH_PIN, GPIO.LOW)
+            print(f"Base No.{counter} \033[1;31mskipped\033[0m")
             client_socket.send(f"Base No.{counter} Skipped".encode())
         elif data == "base":
             counter = counter + 1
-            print(f"Base No.{counter} \033[1;31mbold marked\033[0m")
-            client_socket.send(f"Base No.{counter} Marked".encode())
+            print(f"Base No.{counter} \033[1;32mmarked\033[0m")
+            print("Waiting for user approval...")
+            while True:
+                user_input = input("Press 'R' to continue: ").strip().lower()
+                if user_input == 'r':
+                    break
+            client_socket.send(f"Base No.{counter} Was Reviewed/Attacked".encode())
         else:
             client_socket.send("Unknown command".encode())  # Fallback response
     except Exception as e:

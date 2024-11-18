@@ -115,9 +115,7 @@ with mss.mss() as sct:
                 client_status = "Stop" + f" ({elapsed_time:.2f}s)"
                 send_data_to_server(client_socket, "base")
                 reset_values()
-                time.sleep(0.8)
-                # ADD CONTINUE KEY TO SKIP TIMER AND CONTINUTE PROGRAM
-            elif averages["GOLD"] <= 700000 or averages["ELIXIR"] <= 700000:
+            else:
                 sound_alert("skip.mp3", 0.2)
                 client_status = "Next" + f" ({elapsed_time:.2f}s)"
                 send_data_to_server(client_socket, "click")
