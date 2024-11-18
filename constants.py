@@ -3,6 +3,7 @@ SERVER_PORT = 65432
 server_response = ""
 client_status = ""
 elapsed_time = 0
+raw_string = ""
 
 resources = {
     "GOLD": "", 

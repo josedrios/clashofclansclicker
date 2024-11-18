@@ -24,7 +24,7 @@ def dynamic_printer():
 
     # Status Section
     print("-" * 65)
-    print(f"Time Passed: {elapsed_time:.2f} seconds")
+    print(f"Raw String: {raw_string:<15}")
     print(f"Last Client Status: {client_status:<15}")
     print(f"Last Server Response: {server_response:<15}")
 
@@ -48,9 +48,10 @@ def reset_values():
     }
 
 def string_extraction_and_cleanup(roi, config, currency):
-    global empty_tracker, resources, resource_values
+    global raw_string, resources, resource_values
     text = pytesseract.image_to_string(roi, config=config)
     text = text.rstrip('\n')
+    raw_string = text
     cleaned_string = ''.join(c for c in text if c.isdigit())
 
     if(cleaned_string == ""):
@@ -82,46 +83,50 @@ with mss.mss() as sct:
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((SERVER_HOST, SERVER_PORT))
     start_time = time.perf_counter()
+    moved_windows = False
+    config = ('--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789')
     while True:
         screen = sct.grab(monitor)
         frame = np.array(screen)
-        config = ('--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789')
         # Base Frame Coordinates/Layout
         
         # GOLD
-        frame_config = [275, 200, 170, 40]
-        window_coords = [0, 170]
-        roi = process_image("GOLD", frame, frame_config, window_coords)
+        frame_config = [275, 207, 170, 40]
+        roi = process_image("GOLD", frame, frame_config)
         string_extraction_and_cleanup(roi, config, "GOLD")
 
         # ELIXIR
-        frame_config = [275, 260, 170, 40]
-        window_coords = [400, 170]
-        roi = process_image("ELIXIR", frame, frame_config, window_coords)
+        frame_config = [275, 265, 170, 40]
+        roi = process_image("ELIXIR", frame, frame_config)
         string_extraction_and_cleanup(roi, config, "ELIXIR")
 
+        if moved_windows == False:
+            cv2.moveWindow("GOLD", 0, 160)
+            cv2.moveWindow("ELIXIR", 400, 160)
+            moved_windows = True
+
         # DARK
-        frame_config = [275, 320, 130, 40]
-        window_coords = [800, 170]
-        roi = process_image("DARK", frame, frame_config, window_coords)
-        string_extraction_and_cleanup(roi, config, "DARK")
+        # frame_config = [275, 325, 130, 40]
+        # window_coords = [800, 160]
+        # roi = process_image("DARK", frame, frame_config, window_coords)
+        # string_extraction_and_cleanup(roi, config, "DARK")
 
         current_time = time.perf_counter()
         elapsed_time = current_time - start_time
 
-        if elapsed_time > 7:
-            if averages["GOLD"] > 700000 and averages["ELIXIR"] > 700000:
-                sound_alert("alert.mp3", 0.5)
+        if elapsed_time > 5:
+            #ADD A TOP CAP
+            if 1200000 < averages["GOLD"] < 5000000 and 1200000 < averages["ELIXIR"] < 5000000:
+                sound_alert("alert.mp3", 0.4)
                 client_status = "Stop" + f" ({elapsed_time:.2f}s)"
                 send_data_to_server(client_socket, "base")
-                reset_values()
             else:
-                sound_alert("skip.mp3", 0.2)
+                # sound_alert("skip.mp3", 0.2)
                 client_status = "Next" + f" ({elapsed_time:.2f}s)"
                 send_data_to_server(client_socket, "click")
-                reset_values()
                 time.sleep(2)
             start_time = time.perf_counter()
+            reset_values()
 
         for resource, values in resource_values.items():
             if values:

@@ -1,11 +1,9 @@
+from gpiozero import AngularServo
 import socket
-import RPi.GPIO as GPIO
-import time
+from time import sleep
 
-TOUCH_PIN = 4
-
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(TOUCH_PIN, GPIO.OUT)
+servo = AngularServo(4, min_pulse_width=0.0006, max_pulse_width=0.0023)
+servo.angle = -60
 
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 65432
@@ -25,10 +23,12 @@ while True:
         data = client_socket.recv(1024).decode()  # Receive data
         if data == "click":
             counter = counter + 1
-            GPIO.output(TOUCH_PIN, GPIO.HIGH)
-            time.sleep(0.35)
-            GPIO.output(TOUCH_PIN, GPIO.LOW)
+            servo.angle = -90
+            sleep(0.18)
+            servo.angle = -60
+            sleep(0.2)
             print(f"Base No.{counter} \033[1;31mskipped\033[0m")
+            # If having issue here, remove last sleep and add it here for 0.35
             client_socket.send(f"Base No.{counter} Skipped".encode())
         elif data == "base":
             counter = counter + 1
@@ -43,3 +43,5 @@ while True:
             client_socket.send("Unknown command".encode())  # Fallback response
     except Exception as e:
         print(f"Error: {e}")
+        servo.angle = 0
+        exit()
