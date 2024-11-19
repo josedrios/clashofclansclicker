@@ -35,7 +35,7 @@ while True:
             print(f"Base No.{counter} \033[1;32mmarked\033[0m")
             print("Waiting for user approval...")
             while True:
-                user_input = input("Press 'R' to continue: ").strip().lower()
+                user_input = input("Good (g) or Bad (b)").strip().lower()
                 if user_input == 'g':
                     break
                 if user_input == 'b':
@@ -43,6 +43,7 @@ while True:
                     sleep(0.18)
                     servo.angle = -60
                     sleep(0.2)
+                    break
             client_socket.send(f"Base No.{counter} Was Reviewed/Attacked".encode())
         else:
             client_socket.send("Unknown command".encode())  # Fallback response
