@@ -18,19 +18,24 @@ def dynamic_printer():
     print("-" * 65)
 
     # Print Rows
-    print(f"\033[1;33m{'Gold':<10}\033[0m{f'{resources['GOLD']:,}' if resources['GOLD'] != '' else '0':<15}{averages['GOLD']:<20,.2f}{deviations['GOLD']:<20,.2f}")
-    print(f"\033[1;35m{'Elixir':<10}\033[0m{f'{resources['ELIXIR']:,}' if resources['ELIXIR'] != '' else '0':<15}{averages['ELIXIR']:<20,.2f}{deviations['ELIXIR']:<20,.2f}")
-    print(f"\033[1m{'Dark':<10}\033[0m{f'{resources['DARK']:,}' if resources['DARK'] != '' else '0':<15}{averages['DARK']:<20,.2f}{deviations['DARK']:<20,.2f}")
+    print(f"\033[1;33m{'Gold':<10}\033[0m{f'{resources['GOLD']:,}' if resources['GOLD'] != '' else '0':<15}{averages['GOLD']:<20}{deviations['GOLD']:<20}")
+    print(f"\033[1;35m{'Elixir':<10}\033[0m{f'{resources['ELIXIR']:,}' if resources['ELIXIR'] != '' else '0':<15}{averages['ELIXIR']:<20}{deviations['ELIXIR']:<20}")
+    print(f"\033[1m{'Dark':<10}\033[0m{f'{resources['DARK']:,}' if resources['DARK'] != '' else '0':<15}{averages['DARK']:<20}{deviations['DARK']:<20}")
 
     # Status Section
     print("-" * 65)
     print(f"Raw String: {raw_string:<15}")
+    print(f"Raw String: {corrected_string:<15}")
     print(f"Last Client Status: {client_status:<15}")
     print(f"Last Server Response: {server_response:<15}")
 
 def reset_values():
     global resources, resource_values, averages, deviations
-    resources = {"GOLD": "", "ELIXIR": "", "DARK": ""}
+    resources = {
+        "GOLD": "", 
+        "ELIXIR": "", 
+        "DARK": ""
+    }
     resource_values = {
         "GOLD": [],
         "ELIXIR": [],
@@ -48,10 +53,12 @@ def reset_values():
     }
 
 def string_extraction_and_cleanup(roi, config, currency):
-    global raw_string, resources, resource_values
+    global raw_string, resources, resource_values, translation_table, corrected_string
     text = pytesseract.image_to_string(roi, config=config)
     text = text.rstrip('\n')
     raw_string = text
+    text = text.translate(translation_table)
+    corrected_string = text
     cleaned_string = ''.join(c for c in text if c.isdigit())
 
     if(cleaned_string == ""):
@@ -84,7 +91,8 @@ with mss.mss() as sct:
     client_socket.connect((SERVER_HOST, SERVER_PORT))
     start_time = time.perf_counter()
     moved_windows = False
-    config = ('--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789')
+    # config = ('--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789')
+    config = ('--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789OoBLlSs$()')
     while True:
         screen = sct.grab(monitor)
         frame = np.array(screen)
