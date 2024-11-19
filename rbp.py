@@ -35,7 +35,7 @@ while True:
             print(f"Base No.{counter} \033[1;32mmarked\033[0m")
             print("Waiting for user approval...")
             while True:
-                user_input = input("Good (g) or Bad (b)").strip().lower()
+                user_input = input("Enter Good (g) or Bad (b): ").strip().lower()
                 if user_input == 'g':
                     break
                 if user_input == 'b':

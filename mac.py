@@ -20,12 +20,12 @@ def dynamic_printer():
     # Print Rows
     print(f"\033[1;33m{'Gold':<10}\033[0m{f'{resources['GOLD']:,}' if resources['GOLD'] != '' else '0':<15}{averages['GOLD']:<20}{deviations['GOLD']:<20}")
     print(f"\033[1;35m{'Elixir':<10}\033[0m{f'{resources['ELIXIR']:,}' if resources['ELIXIR'] != '' else '0':<15}{averages['ELIXIR']:<20}{deviations['ELIXIR']:<20}")
-    print(f"\033[1m{'Dark':<10}\033[0m{f'{resources['DARK']:,}' if resources['DARK'] != '' else '0':<15}{averages['DARK']:<20}{deviations['DARK']:<20}")
+    # print(f"\033[1m{'Dark':<10}\033[0m{f'{resources['DARK']:,}' if resources['DARK'] != '' else '0':<15}{averages['DARK']:<20}{deviations['DARK']:<20}")
 
     # Status Section
     print("-" * 65)
-    print(f"Raw String: {raw_string:<15}")
-    print(f"Raw String: {corrected_string:<15}")
+    print(f"Raw Value: {raw_string:<15}")
+    print(f"Final Value: {corrected_string:<15}")
     print(f"Last Client Status: {client_status:<15}")
     print(f"Last Server Response: {server_response:<15}")
 
@@ -99,12 +99,12 @@ with mss.mss() as sct:
         # Base Frame Coordinates/Layout
         
         # GOLD
-        frame_config = [275, 207, 170, 40]
+        frame_config = [275, 209, 170, 40]
         roi = process_image("GOLD", frame, frame_config)
         string_extraction_and_cleanup(roi, config, "GOLD")
 
         # ELIXIR
-        frame_config = [275, 265, 170, 40]
+        frame_config = [275, 267, 170, 40]
         roi = process_image("ELIXIR", frame, frame_config)
         string_extraction_and_cleanup(roi, config, "ELIXIR")
 
