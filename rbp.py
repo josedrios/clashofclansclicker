@@ -27,24 +27,23 @@ while True:
             sleep(0.18)
             servo.angle = -60
             sleep(0.2)
-            print(f"Base No.{counter} \033[1;31mskipped\033[0m")
+            print(f"Base {counter} \033[1;31mskipped\033[0m")
             # If having issue here, remove last sleep and add it here for 0.35
             client_socket.send(f"Base No.{counter} Skipped".encode())
         elif data == "base":
             counter = counter + 1
             print(f"Base No.{counter} \033[1;32mmarked\033[0m")
-            print("Waiting for user approval...")
             while True:
-                user_input = input("Enter Good (g) or Bad (b): ").strip().lower()
-                if user_input == 'g':
+                user_input = input("Waiting for user approval...(Y/N):").strip().lower()
+                if user_input == 'y':
                     break
-                if user_input == 'b':
+                if user_input == 'n':
                     servo.angle = -90
                     sleep(0.18)
                     servo.angle = -60
                     sleep(0.2)
                     break
-            client_socket.send(f"Base No.{counter} Was Reviewed/Attacked".encode())
+            client_socket.send(f"Base {counter} Was Reviewed/Attacked".encode())
         else:
             client_socket.send("Unknown command".encode())  # Fallback response
     except Exception as e:

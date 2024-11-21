@@ -99,12 +99,12 @@ with mss.mss() as sct:
         # Base Frame Coordinates/Layout
         
         # GOLD
-        frame_config = [275, 209, 170, 40]
+        frame_config = [275, 208, 170, 40]
         roi = process_image("GOLD", frame, frame_config)
         string_extraction_and_cleanup(roi, config, "GOLD")
 
         # ELIXIR
-        frame_config = [275, 267, 170, 40]
+        frame_config = [275, 266, 170, 40]
         roi = process_image("ELIXIR", frame, frame_config)
         string_extraction_and_cleanup(roi, config, "ELIXIR")
 
